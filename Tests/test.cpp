@@ -15,14 +15,6 @@ TEST(Node, Constructor) {
 			EXPECT_EQ(n.value_, i);
 		}
 	}
-
-	{
-		for (int i = 0; i < 10; i++) {
-			Node<int> node(i);
-			Node<Node<int>> nodes(node);
-			EXPECT_EQ(nodes.value_.value_, i);
-		}
-	}
 }
 
 TEST(Node, Template) {
@@ -40,25 +32,49 @@ TEST(Node, Template) {
 	EXPECT_EQ(typeid(Node<bool>(0).value_), typeid(bool));
 	EXPECT_EQ(typeid(Node<Node<int>>(Node<int>(0)).value_), typeid(Node<int>));
 }
-
-class Counter {
-public:
-	static int count;
-
-	Counter() {
-		count++;
-	}
-
-	~Counter() {
-		count--;
-	}
-};
-
-int Counter::count = 0;
-
 TEST(List, Constructor) {
-	List<Counter> list;
-	EXPECT_EQ(Counter::count, 0);
+	List<int> list;
+	EXPECT_EQ(NodeCount, 0);
+}
+TEST(List, Destructor) {
+	EXPECT_EQ(ListCount, 0);
+	EXPECT_EQ(NodeCount, 0);
+	{
+		List<int> l;
+		EXPECT_EQ(ListCount, 1);
+		EXPECT_EQ(NodeCount, 0);
+
+		for (int i = 0; i < 20; i++) {
+			l.push_back(i);
+		}
+
+		EXPECT_EQ(ListCount, 1);
+		EXPECT_EQ(NodeCount, 20);
+
+		for (int i = 0; i < 20; i++) {
+			l.remove(l.find(i));
+		}
+
+		EXPECT_EQ(ListCount, 1);
+		EXPECT_EQ(NodeCount, 0);
+
+		for (int i = 0; i < 20; i++) {
+			l.push_front(i);
+		}
+
+		EXPECT_EQ(ListCount, 1);
+		EXPECT_EQ(NodeCount, 20);
+
+		for (int i = 0; i < 20; i++) {
+			l.remove(l.find(i));
+		}
+
+		EXPECT_EQ(ListCount, 1);
+		EXPECT_EQ(NodeCount, 0);
+	}
+
+	EXPECT_EQ(ListCount, 0);
+	EXPECT_EQ(NodeCount, 0);
 }
 
 TEST(List, push_back) {
@@ -528,6 +544,297 @@ TEST(List, Template) {
 		}
 		for (int i = 100; i < 200; i++) {
 			EXPECT_EQ(list.find(std::to_string(i)), nullptr);
+		}
+	}
+}
+
+TEST(List, size) {
+	{
+		List<int> l;
+		EXPECT_EQ(l.size(), 0);
+		for (int i = 0; i < 10; i++) {
+			EXPECT_EQ(l.size(), i);
+			l.push_back(i);
+		}
+		EXPECT_EQ(l.size(), 10);
+
+		for (int i = 0; i < 10; i++) {
+			l.remove(l.find(i));
+		}
+		EXPECT_EQ(l.size(), 0);
+
+		for (int i = 0; i < 10; i++) {
+			EXPECT_EQ(l.size(), i);
+			l.push_front(i);
+		}
+		EXPECT_EQ(l.size(), 10);
+
+		for (int i = 0; i < 10; i++) {
+			l.remove(l.find(i));
+		}
+		EXPECT_EQ(l.size(), 0);
+	}
+}
+
+TEST(List, getMiddle) {
+	List<int> l;
+	EXPECT_EQ(l.getMiddle(), nullptr);
+	l.push_back(0);
+	EXPECT_EQ(l.getMiddle()->value_, 0);
+	l.push_back(1);
+	EXPECT_EQ(l.getMiddle()->value_, 0);
+	l.push_back(2);
+	EXPECT_EQ(l.getMiddle()->value_, 1);
+	l.push_back(3);
+	EXPECT_EQ(l.getMiddle()->value_, 1);
+	l.push_back(4);
+	EXPECT_EQ(l.getMiddle()->value_, 2);
+	l.push_back(5);
+	EXPECT_EQ(l.getMiddle()->value_, 2);
+	l.push_back(6);
+	EXPECT_EQ(l.getMiddle()->value_, 3);
+	l.push_back(7);
+	EXPECT_EQ(l.getMiddle()->value_, 3);
+	l.push_back(8);
+	EXPECT_EQ(l.getMiddle()->value_, 4);
+	l.push_back(9);
+	EXPECT_EQ(l.getMiddle()->value_, 4);
+	l.push_back(10);
+	EXPECT_EQ(l.getMiddle()->value_, 5);
+	l.push_back(11);
+	EXPECT_EQ(l.getMiddle()->value_, 5);
+}
+
+TEST(List, Iterators) {
+	{
+		List<int> l;
+		EXPECT_EQ(l.begin(), l.end());
+
+		l.push_back(0);
+		auto it = l.begin();
+		EXPECT_EQ(++it, l.end());
+
+		for (int i = 1; i < 10; i++) {
+			l.push_back(i);
+		}
+
+		auto iter = l.begin();
+		for (int i = 0; i < 10; i++) {
+			EXPECT_EQ(*iter++, i);
+		}
+	}
+
+	{
+		List<int> l;
+		l.push_back(0);
+		auto it = l.end();
+
+		bool error = false;
+		try {
+			*it;
+		}
+		catch (const std::exception&) {
+			error = true;
+		}
+		EXPECT_TRUE(error);
+	}
+
+	{
+		List<int> l;
+		l.push_back(0);
+		auto it = l.end();
+		--it;
+		EXPECT_EQ(*it, 0);
+	}
+
+	{
+		List<int> l;
+		l.push_back(0);
+		l.push_back(1);
+		auto it = l.end();
+		--it;
+		--it;
+		EXPECT_EQ(*it, 0);
+		++it;
+		EXPECT_EQ(*it, 1);
+		--it;
+		EXPECT_EQ(*it, 0);
+		EXPECT_EQ(it, l.begin());
+		++it;
+		++it;
+		EXPECT_EQ(it, l.end());
+	}
+}
+
+TEST(List, merge) {
+	{
+		List<int> l1;
+		for (int i = 0; i < 10; i++) {
+			l1.push_back(i);
+		}
+
+		List<int> l2;
+		for (int i = 10; i < 20; i++) {
+			l2.push_back(i);
+		}
+
+		List<int>* newList = merge(&l1, &l2);
+		auto it = newList->begin();
+		for (int i = 0; i < 20; i++) {
+			EXPECT_EQ(*it++, i);
+		}
+
+		bool error = false;
+		try {
+			*it;
+		}
+		catch (const std::exception&) {
+			error = true;
+		}
+		EXPECT_TRUE(error);
+	}
+
+	{
+		List<int> l1;
+		List<int> l2;
+		List<int>* newList = merge(&l1, &l2);
+		EXPECT_EQ(newList->size(), 0);
+	}
+
+	{
+		List<int> l1;
+		for (int i = 0; i < 10; i++) {
+			l1.push_back(2 * i);
+		}
+		List<int> l2;
+		for (int i = 0; i < 10; i++) {
+			l2.push_back(2 * i + 1);
+		}
+		List<int>* newList = merge(&l1, &l2);
+		auto it = newList->begin();
+		for (int i = 0; i < 20; i++) {
+			EXPECT_EQ(*it, i);
+			++it;
+		}
+		EXPECT_EQ(it, newList->end());
+	}
+
+	{
+		List<int> l1;
+		for (int i = 9; i >= 0; i--) {
+			l1.push_back(-2 * i);
+		}
+		List<int> l2;
+		for (int i = 9; i >= 0; i--) {
+			l2.push_back(-2 * i - 1);
+		}
+		List<int>* newList = merge(&l1, &l2);
+		auto it = newList->begin();
+		for (int i = 19; i >= 0; i--) {
+			EXPECT_EQ(*it++, -i);
+		}
+		EXPECT_EQ(it, newList->end());
+	}
+}
+
+TEST(List, ItConstructor) {
+	{
+		List<int> l1;
+		List<int> l2(l1.begin(), l1.end());
+		EXPECT_EQ(l2.begin(), l2.end());
+		bool error = false;
+		try {
+			*l2.begin();
+		}
+		catch (const std::exception&) {
+			error = true;
+		}
+		EXPECT_TRUE(error);
+	}
+
+	{
+		List<int> l1;
+		l1.push_back(0);
+		List<int> l2(l1.begin(), l1.end());
+		auto iter = l2.begin();
+		EXPECT_EQ(++iter, l2.end());
+		EXPECT_EQ(*l2.begin(), 0);
+	}
+
+	{
+		List<int> l1;
+		l1.push_back(0);
+		l1.push_back(5);
+		l1.push_back(-253);
+		l1.push_back(233223);
+		l1.push_back(233223);
+
+		List<int> l2(l1.begin(), l1.end());
+		auto iter = l2.begin();
+		EXPECT_EQ(*iter++, 0);
+		EXPECT_EQ(*iter++, 5);
+		EXPECT_EQ(*iter++, -253);
+		EXPECT_EQ(*iter++, 233223);
+		EXPECT_EQ(*iter++, 233223);
+
+		bool error = false;
+		try {
+			*iter;
+		}
+		catch (const std::exception&) {
+			error = true;
+		}
+		EXPECT_TRUE(error);
+	}
+}
+
+TEST(List, mergeSort) {
+	{
+		List<int> list;
+		for (int i = 9; i >= 0; i--) {
+			list.push_back(i);
+		}
+		List<int>* newList = mergeSort(&list);
+		auto it = newList->begin();
+		for (int i = 0; i < 10; i++) {
+			EXPECT_EQ(*it++, i);
+		}
+	}
+
+	{
+		List<int> list;
+		list.push_back(0);
+		list.push_back(35252);
+		list.push_back(-253);
+		list.push_back(131313);
+		list.push_back(-255553);
+		list.push_back(15);
+		list.push_back(155);
+		list.push_back(16);
+		list.push_back(-16);
+		list.push_back(-156);
+		List<int>* newList = mergeSort(&list);
+		auto it = newList->begin();
+		++it;
+		while (it != newList->end()) {
+			auto iter = it;
+			iter--;
+			EXPECT_LT(*iter, *it++);
+		}
+	}
+
+	{
+		List<int> list;
+		for (int i = 0; i < 100; i++) {
+			list.push_back((rand() % 10000) * pow(-1, i));
+		}
+		List<int>* newList = mergeSort(&list);
+		auto it = newList->begin();
+		++it;
+		while (it != newList->end()) {
+			auto iter = it;
+			iter--;
+			EXPECT_LE(*iter, *it++);
 		}
 	}
 }
